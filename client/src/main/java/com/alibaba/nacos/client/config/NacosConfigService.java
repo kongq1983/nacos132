@@ -51,52 +51,52 @@ import java.util.Properties;
  */
 @SuppressWarnings("PMD.ServiceOrDaoClassShouldEndWithImplRule")
 public class NacosConfigService implements ConfigService {
-    
+
     private static final Logger LOGGER = LogUtils.logger(NacosConfigService.class);
-    
+
     private static final long POST_TIMEOUT = 3000L;
-    
+
     /**
      * http agent.
      */
     private final HttpAgent agent;
-    
+
     /**
      * long polling.
      */
     private final ClientWorker worker;
-    
+
     private String namespace;
-    
+
     private final String encode;
-    
+
     private final ConfigFilterChainManager configFilterChainManager = new ConfigFilterChainManager();
-    
+
     public NacosConfigService(Properties properties) throws NacosException {
         ValidatorUtils.checkInitParam(properties);
         String encodeTmp = properties.getProperty(PropertyKeyConst.ENCODE);
         if (StringUtils.isBlank(encodeTmp)) {
-            this.encode = Constants.ENCODE;
+            this.encode = Constants.ENCODE; // 默认utf-8
         } else {
             this.encode = encodeTmp.trim();
         }
         initNamespace(properties);
-        
+
         this.agent = new MetricsHttpAgent(new ServerHttpAgent(properties));
         this.agent.start();
         this.worker = new ClientWorker(this.agent, this.configFilterChainManager, properties);
     }
-    
+
     private void initNamespace(Properties properties) {
         namespace = ParamUtil.parseNamespace(properties);
         properties.put(PropertyKeyConst.NAMESPACE, namespace);
     }
-    
+
     @Override
     public String getConfig(String dataId, String group, long timeoutMs) throws NacosException {
         return getConfigInner(namespace, dataId, group, timeoutMs);
     }
-    
+
     @Override
     public String getConfigAndSignListener(String dataId, String group, long timeoutMs, Listener listener)
             throws NacosException {
@@ -104,38 +104,38 @@ public class NacosConfigService implements ConfigService {
         worker.addTenantListenersWithContent(dataId, group, content, Arrays.asList(listener));
         return content;
     }
-    
+
     @Override
     public void addListener(String dataId, String group, Listener listener) throws NacosException {
         worker.addTenantListeners(dataId, group, Arrays.asList(listener));
     }
-    
+
     @Override
     public boolean publishConfig(String dataId, String group, String content) throws NacosException {
         return publishConfigInner(namespace, dataId, group, null, null, null, content);
     }
-    
+
     @Override
     public boolean removeConfig(String dataId, String group) throws NacosException {
         return removeConfigInner(namespace, dataId, group, null);
     }
-    
+
     @Override
     public void removeListener(String dataId, String group, Listener listener) {
         worker.removeTenantListener(dataId, group, listener);
     }
-    
+
     private String getConfigInner(String tenant, String dataId, String group, long timeoutMs) throws NacosException {
-        group = null2defaultGroup(group);
+        group = null2defaultGroup(group); // 默认:DEFAULT_GROUP
         ParamUtils.checkKeyParam(dataId, group);
         ConfigResponse cr = new ConfigResponse();
-        
+
         cr.setDataId(dataId);
         cr.setTenant(tenant);
         cr.setGroup(group);
-        
+
         // 优先使用本地配置
-        String content = LocalConfigInfoProcessor.getFailover(agent.getName(), dataId, group, tenant);
+        String content = LocalConfigInfoProcessor.getFailover(agent.getName(), dataId, group, tenant); // 先从本地缓存文件
         if (content != null) {
             LOGGER.warn("[{}] [get-config] get failover ok, dataId={}, group={}, tenant={}, config={}", agent.getName(),
                     dataId, group, tenant, ContentUtils.truncateContent(content));
@@ -144,14 +144,14 @@ public class NacosConfigService implements ConfigService {
             content = cr.getContent();
             return content;
         }
-        
-        try {
+
+        try { // ct[0]:内容  ct[1]:文本类型（text、xml、yaml）
             String[] ct = worker.getServerConfig(dataId, group, tenant, timeoutMs);
             cr.setContent(ct[0]);
-            
+
             configFilterChainManager.doFilter(null, cr);
             content = cr.getContent();
-            
+
             return content;
         } catch (NacosException ioe) {
             if (NacosException.NO_RIGHT == ioe.getErrCode()) {
@@ -160,7 +160,7 @@ public class NacosConfigService implements ConfigService {
             LOGGER.warn("[{}] [get-config] get from server error, dataId={}, group={}, tenant={}, msg={}",
                     agent.getName(), dataId, group, tenant, ioe.toString());
         }
-        
+
         LOGGER.warn("[{}] [get-config] get snapshot ok, dataId={}, group={}, tenant={}, config={}", agent.getName(),
                 dataId, group, tenant, ContentUtils.truncateContent(content));
         content = LocalConfigInfoProcessor.getSnapshot(agent.getName(), dataId, group, tenant);
@@ -169,11 +169,11 @@ public class NacosConfigService implements ConfigService {
         content = cr.getContent();
         return content;
     }
-    
+
     private String null2defaultGroup(String group) {
         return (null == group) ? Constants.DEFAULT_GROUP : group.trim();
     }
-    
+
     private boolean removeConfigInner(String tenant, String dataId, String group, String tag) throws NacosException {
         group = null2defaultGroup(group);
         ParamUtils.checkKeyParam(dataId, group);
@@ -181,7 +181,7 @@ public class NacosConfigService implements ConfigService {
         Map<String, String> params = new HashMap<String, String>(4);
         params.put("dataId", dataId);
         params.put("group", group);
-        
+
         if (StringUtils.isNotEmpty(tenant)) {
             params.put("tenant", tenant);
         }
@@ -195,7 +195,7 @@ public class NacosConfigService implements ConfigService {
             LOGGER.warn("[remove] error, " + dataId + ", " + group + ", " + tenant + ", msg: " + ex.toString());
             return false;
         }
-        
+
         if (result.ok()) {
             LOGGER.info("[{}] [remove] ok, dataId={}, group={}, tenant={}", agent.getName(), dataId, group, tenant);
             return true;
@@ -209,12 +209,12 @@ public class NacosConfigService implements ConfigService {
             return false;
         }
     }
-    
+
     private boolean publishConfigInner(String tenant, String dataId, String group, String tag, String appName,
             String betaIps, String content) throws NacosException {
         group = null2defaultGroup(group);
         ParamUtils.checkParam(dataId, group, content);
-        
+
         ConfigRequest cr = new ConfigRequest();
         cr.setDataId(dataId);
         cr.setTenant(tenant);
@@ -222,7 +222,7 @@ public class NacosConfigService implements ConfigService {
         cr.setContent(content);
         configFilterChainManager.doFilter(cr, null);
         content = cr.getContent();
-        
+
         String url = Constants.CONFIG_CONTROLLER_PATH;
         Map<String, String> params = new HashMap<String, String>(6);
         params.put("dataId", dataId);
@@ -241,7 +241,7 @@ public class NacosConfigService implements ConfigService {
         if (StringUtils.isNotEmpty(betaIps)) {
             headers.put("betaIps", betaIps);
         }
-        
+
         HttpRestResult<String> result = null;
         try {
             result = agent.httpPost(url, headers, params, encode, POST_TIMEOUT);
@@ -250,7 +250,7 @@ public class NacosConfigService implements ConfigService {
                     ex.toString());
             return false;
         }
-        
+
         if (result.ok()) {
             LOGGER.info("[{}] [publish-single] ok, dataId={}, group={}, tenant={}, config={}", agent.getName(), dataId,
                     group, tenant, ContentUtils.truncateContent(content));
@@ -264,9 +264,9 @@ public class NacosConfigService implements ConfigService {
                     dataId, group, tenant, result.getCode(), result.getMessage());
             return false;
         }
-        
+
     }
-    
+
     @Override
     public String getServerStatus() {
         if (worker.isHealthServer()) {
@@ -275,7 +275,7 @@ public class NacosConfigService implements ConfigService {
             return "DOWN";
         }
     }
-    
+
     @Override
     public void shutDown() throws NacosException {
         agent.shutdown();

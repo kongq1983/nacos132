@@ -25,14 +25,14 @@ import org.springframework.stereotype.Component;
 import java.net.HttpURLConnection;
 import java.util.Map;
 
-/**
+/** 用于转发请求给leader
  * Raft http proxy.
  *
  * @author nacos
  */
 @Component
 public class RaftProxy {
-    
+
     /**
      * Proxy get method.
      *
@@ -47,13 +47,13 @@ public class RaftProxy {
             server = server + UtilsAndCommons.IP_PORT_SPLITER + ApplicationUtils.getPort();
         }
         String url = "http://" + server + ApplicationUtils.getContextPath() + api;
-        
+
         HttpClient.HttpResult result = HttpClient.httpGet(url, null, params);
         if (result.code != HttpURLConnection.HTTP_OK) {
             throw new IllegalStateException("leader failed, caused by: " + result.content);
         }
     }
-    
+
     /**
      * Proxy specified method.
      *
@@ -83,12 +83,12 @@ public class RaftProxy {
             default:
                 throw new RuntimeException("unsupported method:" + method);
         }
-        
+
         if (result.code != HttpURLConnection.HTTP_OK) {
             throw new IllegalStateException("leader failed, caused by: " + result.content);
         }
     }
-    
+
     /**
      * Proxy post method with large body.
      *
@@ -105,7 +105,7 @@ public class RaftProxy {
             server = server + UtilsAndCommons.IP_PORT_SPLITER + ApplicationUtils.getPort();
         }
         String url = "http://" + server + ApplicationUtils.getContextPath() + api;
-        
+
         HttpClient.HttpResult result = HttpClient.httpPostLarge(url, headers, content);
         if (result.code != HttpURLConnection.HTTP_OK) {
             throw new IllegalStateException("leader failed, caused by: " + result.content);

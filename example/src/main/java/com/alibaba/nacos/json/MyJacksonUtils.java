@@ -14,10 +14,12 @@
  * limitations under the License.
  */
 
-package com.alibaba.nacos.common.utils;
+package com.alibaba.nacos.json;
 
 import com.alibaba.nacos.api.exception.runtime.NacosDeserializationException;
 import com.alibaba.nacos.api.exception.runtime.NacosSerializationException;
+import com.alibaba.nacos.common.utils.ByteUtils;
+import com.alibaba.nacos.common.utils.StringUtils;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -29,8 +31,8 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Type;
 
 /**
@@ -38,13 +40,13 @@ import java.lang.reflect.Type;
  *
  * @author <a href="mailto:liaochuntao@live.com">liaochuntao</a>
  */
-public final class JacksonUtils {
+public final class MyJacksonUtils {
 
     static ObjectMapper mapper = new ObjectMapper();
 
     static {
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        mapper.setSerializationInclusion(Include.NON_NULL); // 值为null的,toJson的时候（不包括）
+        mapper.setSerializationInclusion(Include.NON_NULL);
     }
 
     /**
