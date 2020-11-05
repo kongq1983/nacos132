@@ -173,8 +173,8 @@ public class RaftPeerSet extends MemberChangeListener {
         SortedBag ips = new TreeBag();
         int maxApproveCount = 0;
         String maxApprovePeer = null;
-        for (RaftPeer peer : peers.values()) {
-            if (StringUtils.isEmpty(peer.voteFor)) {
+        for (RaftPeer peer : peers.values()) { // 当前全部raft节点
+            if (StringUtils.isEmpty(peer.voteFor)) { // 没投票，则不计票，忽略
                 continue;
             }
 
@@ -332,7 +332,7 @@ public class RaftPeerSet extends MemberChangeListener {
             raftPeer.ip = address;
 
             // first time meet the local server:
-            if (ApplicationUtils.getLocalAddress().equals(address)) {
+            if (ApplicationUtils.getLocalAddress().equals(address)) { //ip+":"+port
                 raftPeer.term.set(localTerm.get());
             }
 

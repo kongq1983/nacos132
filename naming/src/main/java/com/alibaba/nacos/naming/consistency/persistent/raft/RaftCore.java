@@ -466,7 +466,7 @@ public class RaftCore {
                                         .error("NACOS-RAFT vote failed: {}, url: {}", response.getResponseBody(), url);
                                 return 1;
                             }
-                            // 响应成功  投票结果
+                            // 响应成功  投票结果 远程raft投票节点
                             RaftPeer peer = JacksonUtils.toObj(response.getResponseBody(), RaftPeer.class);
 
                             Loggers.RAFT.info("received approve from peer: {}", JacksonUtils.toJson(peer));
@@ -494,23 +494,23 @@ public class RaftCore {
             throw new IllegalStateException("can not find peer: " + remote.ip);
         }
 
-        RaftPeer local = peers.get(NetUtils.localServer());
-        if (remote.term.get() <= local.term.get()) {
+        RaftPeer local = peers.get(NetUtils.localServer());  // 获取本实例的raft节点(ip:port)
+        if (remote.term.get() <= local.term.get()) { // 远程的term <=本地的term term相当于第几届
             String msg = "received illegitimate vote" + ", voter-term:" + remote.term + ", votee-term:" + local.term;
 
             Loggers.RAFT.info(msg);
             if (StringUtils.isEmpty(local.voteFor)) {
-                local.voteFor = local.ip;
+                local.voteFor = local.ip; // 本实例也触发了选举  选自己
             }
 
             return local;
         }
-
+        // 远程的term > 当前raft节点的term  重置选举时间
         local.resetLeaderDue();
 
-        local.state = RaftPeer.State.FOLLOWER;
-        local.voteFor = remote.ip;
-        local.term.set(remote.term.get());
+        local.state = RaftPeer.State.FOLLOWER; // 当前raft实例变为FOLLOWER
+        local.voteFor = remote.ip; // 给远程raft投一票
+        local.term.set(remote.term.get()); // 本地raft的term设置远程的
 
         Loggers.RAFT.info("vote {} as leader, term: {}", remote.ip, remote.term);
 
