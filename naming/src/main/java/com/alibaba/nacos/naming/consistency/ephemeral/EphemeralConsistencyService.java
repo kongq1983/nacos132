@@ -18,7 +18,7 @@ package com.alibaba.nacos.naming.consistency.ephemeral;
 
 import com.alibaba.nacos.naming.consistency.ConsistencyService;
 
-/**
+/** AP方式同步
  * A type of consistency for ephemeral data.
  *
  * <p>This kind of consistency is not required to store data on disk or database, because the ephemeral data always

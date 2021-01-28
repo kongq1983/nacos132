@@ -29,25 +29,25 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Service;
 
-/**
+/** CP方式同步  cp模式追求的是数据一致性，为了数据一致性，那么肯定得选出一个leader，由leader首先同步
  * Use simplified Raft protocol to maintain the consistency status of Nacos cluster.
- *
+ * nacos使用raft协议来进行选举leader，来实现cp模式。
  * @author nkorange
  * @since 1.0.0
  */
 @DependsOn("ProtocolManager")
 @Service
 public class RaftConsistencyServiceImpl implements PersistentConsistencyService {
-    
+
     @Autowired
     private RaftCore raftCore;
-    
+
     @Autowired
     private RaftPeerSet peers;
-    
+
     @Autowired
     private SwitchDomain switchDomain;
-    
+
     @Override
     public void put(String key, Record value) throws NacosException {
         try {
@@ -58,7 +58,7 @@ public class RaftConsistencyServiceImpl implements PersistentConsistencyService 
                     e);
         }
     }
-    
+
     @Override
     public void remove(String key) throws NacosException {
         try {
@@ -76,27 +76,27 @@ public class RaftConsistencyServiceImpl implements PersistentConsistencyService 
             throw new NacosException(NacosException.SERVER_ERROR, "Raft remove failed, key:" + key, e);
         }
     }
-    
+
     @Override
     public Datum get(String key) throws NacosException {
         return raftCore.getDatum(key);
     }
-    
+
     @Override
     public void listen(String key, RecordListener listener) throws NacosException {
         raftCore.listen(key, listener);
     }
-    
+
     @Override
     public void unListen(String key, RecordListener listener) throws NacosException {
         raftCore.unListen(key, listener);
     }
-    
+
     @Override
     public boolean isAvailable() {
         return raftCore.isInitialized() || ServerStatus.UP.name().equals(switchDomain.getOverriddenServerStatus());
     }
-    
+
     /**
      * Put a new datum from other server.
      *
@@ -113,7 +113,7 @@ public class RaftConsistencyServiceImpl implements PersistentConsistencyService 
                     "Raft onPut failed, datum:" + datum + ", source: " + source, e);
         }
     }
-    
+
     /**
      * Remove a new datum from other server.
      *

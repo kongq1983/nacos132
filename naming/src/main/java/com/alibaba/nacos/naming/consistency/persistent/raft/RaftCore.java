@@ -192,10 +192,10 @@ public class RaftCore {
 
             final RaftPeer leader = getLeader();
 
-            raftProxy.proxyPostLarge(leader.ip, API_PUB, params.toString(), parameters);
+            raftProxy.proxyPostLarge(leader.ip, API_PUB, params.toString(), parameters); // 转发给leader
             return;
         }
-        // 如果是，则向所有节点发送onPublish
+        // 如果是leader，则向所有节点发送onPublish
         try {
             OPERATE_LOCK.lock();
             final long start = System.currentTimeMillis();
@@ -216,10 +216,10 @@ public class RaftCore {
 
             final String content = json.toString();
 
-            final CountDownLatch latch = new CountDownLatch(peers.majorityCount());
-            for (final String server : peers.allServersIncludeMyself()) {
-                if (isLeader(server)) {
-                    latch.countDown();
+            final CountDownLatch latch = new CountDownLatch(peers.majorityCount()); // 过半节点 peers.size() / 2 + 1;
+            for (final String server : peers.allServersIncludeMyself()) { // 得到所有的节点 包括自己
+                if (isLeader(server)) { //执行到这里的当前线程就是leader
+                    latch.countDown(); // leader直接-1
                     continue;
                 }
                 final String url = buildUrl(server, API_ON_PUB);
@@ -244,8 +244,8 @@ public class RaftCore {
                         });
 
             }
-
-            if (!latch.await(UtilsAndCommons.RAFT_PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS)) {
+            // latch到0之后 latch.await=true，否则返回false，如果false也就是没有过半
+            if (!latch.await(UtilsAndCommons.RAFT_PUBLISH_TIMEOUT, TimeUnit.MILLISECONDS)) { // 5s
                 // only majority servers return success can we consider this update success
                 Loggers.RAFT.error("data publish failed, caused failed to notify majority, key={}", key);
                 throw new IllegalStateException("data publish failed, caused failed to notify majority, key=" + key);

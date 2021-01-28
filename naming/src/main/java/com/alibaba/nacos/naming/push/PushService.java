@@ -472,7 +472,7 @@ public class PushService implements ApplicationContextAware, ApplicationListener
         public DataSource getDataSource() {
             return dataSource;
         }
-        /** 超过10s*/
+        /** 是否僵尸 超过10s*/
         public boolean zombie() {
             return System.currentTimeMillis() - lastRefTime > switchDomain.getPushCacheMillis(serviceName);
         }

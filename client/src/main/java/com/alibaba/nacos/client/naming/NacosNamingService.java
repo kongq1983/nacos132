@@ -197,7 +197,7 @@ public class NacosNamingService implements NamingService {
             BeatInfo beatInfo = beatReactor.buildBeatInfo(groupedServiceName, instance); // 构造心跳包
             beatReactor.addBeatInfo(groupedServiceName, beatInfo); // /nacos/v1/ns/instance/beat发送心跳
         } // addBeatInfo: /nacos/v1/ns/instance/beat?app=unknown&serviceName=DEFAULT_GROUP%40%40nacos-discovery&namespaceId=public&port=8082&clusterName=DEFAULT&ip=169.254.104.253
-        serverProxy.registerService(groupedServiceName, groupName, instance);
+        serverProxy.registerService(groupedServiceName, groupName, instance); // 服务注册
     }
 
     @Override
