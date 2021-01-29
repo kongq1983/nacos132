@@ -385,7 +385,7 @@ public class HostReactor implements Closeable {
             long delayTime = -1;
 
             try {
-                ServiceInfo serviceObj = serviceInfoMap.get(ServiceInfo.getKey(serviceName, clusters));
+                ServiceInfo serviceObj = serviceInfoMap.get(ServiceInfo.getKey(serviceName, clusters)); //key : serviceName@@clusters
 
                 if (serviceObj == null) {
                     updateServiceNow(serviceName, clusters);

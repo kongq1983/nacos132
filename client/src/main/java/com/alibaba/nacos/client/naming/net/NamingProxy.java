@@ -189,7 +189,7 @@ public class NamingProxy implements Closeable {
                 return;
             }
 
-            if (System.currentTimeMillis() - lastSrvRefTime < vipSrvRefInterMillis) {
+            if (System.currentTimeMillis() - lastSrvRefTime < vipSrvRefInterMillis) { // vipSrvRefInterMillis默认30s
                 return;
             }
 

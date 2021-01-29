@@ -82,7 +82,7 @@ public class PushReceiver implements Runnable, Closeable {
 
                 udpSocket.receive(packet);
 
-                String json = new String(IoUtils.tryDecompress(packet.getData()), UTF_8).trim();
+                String json = new String(IoUtils.tryDecompress(packet.getData()), UTF_8).trim(); // 解压缩tryDecompress
                 NAMING_LOGGER.info("received push data: " + json + " from " + packet.getAddress().toString());
 
                 PushPacket pushPacket = JacksonUtils.toObj(json, PushPacket.class);
