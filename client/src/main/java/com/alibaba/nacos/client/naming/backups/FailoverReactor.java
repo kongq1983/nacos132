@@ -45,19 +45,19 @@ import java.util.concurrent.TimeUnit;
 
 import static com.alibaba.nacos.client.utils.LogUtils.NAMING_LOGGER;
 
-/**
+/** 用于故障转移，会启动1个名为com.alibaba.nacos.naming.failover的线程并定时读取名为00-00—000-VIPSRV_FAILOVER_SWITCH-000—00-00的文件，内容为1时表示开启，此时获取服务信息时会返回FailoverReactor缓存的服务信息
  * Failover reactor.
  *
  * @author nkorange
  */
 public class FailoverReactor implements Closeable {
-    
+
     private final String failoverDir;
-    
+
     private final HostReactor hostReactor;
-    
+
     private final ScheduledExecutorService executorService;
-    
+
     public FailoverReactor(HostReactor hostReactor, String cacheDir) {
         this.hostReactor = hostReactor;
         this.failoverDir = cacheDir + "/failover";
@@ -73,45 +73,45 @@ public class FailoverReactor implements Closeable {
         });
         this.init();
     }
-    
+
     private Map<String, ServiceInfo> serviceMap = new ConcurrentHashMap<String, ServiceInfo>();
-    
+
     private final Map<String, String> switchParams = new ConcurrentHashMap<String, String>();
-    
+
     private static final long DAY_PERIOD_MINUTES = 24 * 60;
-    
+
     /**
      * Init.
      */
     public void init() {
-        
+        // 每5s执行1次
         executorService.scheduleWithFixedDelay(new SwitchRefresher(), 0L, 5000L, TimeUnit.MILLISECONDS);
-        
+        // 每天执行1次
         executorService.scheduleWithFixedDelay(new DiskFileWriter(), 30, DAY_PERIOD_MINUTES, TimeUnit.MINUTES);
-        
+
         // backup file on startup if failover directory is empty.
         executorService.schedule(new Runnable() {
             @Override
             public void run() {
                 try {
-                    File cacheDir = new File(failoverDir);
-                    
-                    if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+                    File cacheDir = new File(failoverDir); // $cacheDir/failover
+
+                    if (!cacheDir.exists() && !cacheDir.mkdirs()) { // 不存在则创建，如果创建失败，则抛异常
                         throw new IllegalStateException("failed to create cache dir: " + failoverDir);
                     }
-                    
+
                     File[] files = cacheDir.listFiles();
-                    if (files == null || files.length <= 0) {
-                        new DiskFileWriter().run();
+                    if (files == null || files.length <= 0) { // 如果发现缓存的/failover目录下没有文件，则会写入本地
+                        new DiskFileWriter().run(); // 把serviceInfoMap写入磁盘 每个服务1个文件
                     }
                 } catch (Throwable e) {
                     NAMING_LOGGER.error("[NA] failed to backup file on startup.", e);
                 }
-                
+
             }
-        }, 10000L, TimeUnit.MILLISECONDS);
+        }, 10000L, TimeUnit.MILLISECONDS); // 初始化后延迟10秒执行1次
     }
-    
+
     /**
      * Add day.
      *
@@ -125,7 +125,7 @@ public class FailoverReactor implements Closeable {
         startDT.add(Calendar.DAY_OF_MONTH, num);
         return startDT.getTime();
     }
-    
+
     @Override
     public void shutdown() throws NacosException {
         String className = this.getClass().getName();
@@ -133,30 +133,30 @@ public class FailoverReactor implements Closeable {
         ThreadUtils.shutdownThreadPool(executorService, NAMING_LOGGER);
         NAMING_LOGGER.info("{} do shutdown stop", className);
     }
-    
+
     class SwitchRefresher implements Runnable {
-        
+
         long lastModifiedMillis = 0L;
-        
+
         @Override
         public void run() {
             try {
-                File switchFile = new File(failoverDir + UtilAndComs.FAILOVER_SWITCH);
-                if (!switchFile.exists()) {
+                File switchFile = new File(failoverDir + UtilAndComs.FAILOVER_SWITCH); //$cacheDir/00-00---000-VIPSRV_FAILOVER_SWITCH-000---00-00
+                if (!switchFile.exists()) { // 文件不存在
                     switchParams.put("failover-mode", "false");
                     NAMING_LOGGER.debug("failover switch is not found, " + switchFile.getName());
                     return;
                 }
-                
+                // 文件存在 获取最后修改时间
                 long modified = switchFile.lastModified();
-                
-                if (lastModifiedMillis < modified) {
+
+                if (lastModifiedMillis < modified) { // 数据有变更
                     lastModifiedMillis = modified;
                     String failover = ConcurrentDiskUtil.getFileContent(failoverDir + UtilAndComs.FAILOVER_SWITCH,
                             Charset.defaultCharset().toString());
                     if (!StringUtils.isEmpty(failover)) {
                         String[] lines = failover.split(DiskCache.getLineSeparator());
-                        
+
                         for (String line : lines) {
                             String line1 = line.trim();
                             if ("1".equals(line1)) {
@@ -172,57 +172,57 @@ public class FailoverReactor implements Closeable {
                         switchParams.put("failover-mode", "false");
                     }
                 }
-                
+
             } catch (Throwable e) {
                 NAMING_LOGGER.error("[NA] failed to read failover switch.", e);
             }
         }
     }
-    
+
     class FailoverFileReader implements Runnable {
-        
+
         @Override
         public void run() {
             Map<String, ServiceInfo> domMap = new HashMap<String, ServiceInfo>(16);
-            
+
             BufferedReader reader = null;
             try {
-                
+
                 File cacheDir = new File(failoverDir);
-                if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+                if (!cacheDir.exists() && !cacheDir.mkdirs()) { // 目录不存在则创建 创建失败则抛异常
                     throw new IllegalStateException("failed to create cache dir: " + failoverDir);
                 }
-                
-                File[] files = cacheDir.listFiles();
-                if (files == null) {
+
+                File[] files = cacheDir.listFiles(); // failover目录下所有文件
+                if (files == null) { // 不存在，则直接return
                     return;
                 }
-                
+
                 for (File file : files) {
-                    if (!file.isFile()) {
+                    if (!file.isFile()) { // 不是文件 重新循环
                         continue;
                     }
-                    
-                    if (file.getName().equals(UtilAndComs.FAILOVER_SWITCH)) {
+
+                    if (file.getName().equals(UtilAndComs.FAILOVER_SWITCH)) { // 如果是故障转移文件 则循环下1个
                         continue;
                     }
-                    
+                    // name=DEFAULT_GROUP%40%40nacos-discovery@@DEFAULT
                     ServiceInfo dom = new ServiceInfo(file.getName());
-                    
+
                     try {
                         String dataString = ConcurrentDiskUtil
-                                .getFileContent(file, Charset.defaultCharset().toString());
+                                .getFileContent(file, Charset.defaultCharset().toString()); // 文件内容
                         reader = new BufferedReader(new StringReader(dataString));
-                        
+
                         String json;
-                        if ((json = reader.readLine()) != null) {
+                        if ((json = reader.readLine()) != null) { // 读取1行
                             try {
                                 dom = JacksonUtils.toObj(json, ServiceInfo.class);
                             } catch (Exception e) {
                                 NAMING_LOGGER.error("[NA] error while parsing cached dom : " + json, e);
                             }
                         }
-                        
+
                     } catch (Exception e) {
                         NAMING_LOGGER.error("[NA] failed to read cache for dom: " + file.getName(), e);
                     } finally {
@@ -234,22 +234,22 @@ public class FailoverReactor implements Closeable {
                             //ignore
                         }
                     }
-                    if (!CollectionUtils.isEmpty(dom.getHosts())) {
-                        domMap.put(dom.getKey(), dom);
+                    if (!CollectionUtils.isEmpty(dom.getHosts())) { // 有hosts数据
+                        domMap.put(dom.getKey(), dom); // 存放到domMap
                     }
                 }
             } catch (Exception e) {
                 NAMING_LOGGER.error("[NA] failed to read cache file", e);
             }
-            
+
             if (domMap.size() > 0) {
                 serviceMap = domMap;
             }
         }
     }
-    
+
     class DiskFileWriter extends TimerTask {
-        
+
         @Override
         public void run() {
             Map<String, ServiceInfo> map = hostReactor.getServiceInfoMap();
@@ -262,24 +262,24 @@ public class FailoverReactor implements Closeable {
                         .equals(serviceInfo.getName(), "00-00---000-ALL_HOSTS-000---00-00")) {
                     continue;
                 }
-                
+
                 DiskCache.write(serviceInfo, failoverDir);
             }
         }
     }
-    
+    /** 故障转移标志 */
     public boolean isFailoverSwitch() {
         return Boolean.parseBoolean(switchParams.get("failover-mode"));
     }
-    
+
     public ServiceInfo getService(String key) {
         ServiceInfo serviceInfo = serviceMap.get(key);
-        
+
         if (serviceInfo == null) {
             serviceInfo = new ServiceInfo();
             serviceInfo.setName(key);
         }
-        
+
         return serviceInfo;
     }
 }

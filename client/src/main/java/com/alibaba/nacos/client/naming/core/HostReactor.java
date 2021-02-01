@@ -261,7 +261,7 @@ public class HostReactor implements Closeable {
 
         NAMING_LOGGER.debug("failover-mode: " + failoverReactor.isFailoverSwitch());
         String key = ServiceInfo.getKey(serviceName, clusters); // name@@clusters
-        if (failoverReactor.isFailoverSwitch()) {
+        if (failoverReactor.isFailoverSwitch()) { // 从本地文件读取
             return failoverReactor.getService(key);
         }
         // 获取本地map中的服务信息

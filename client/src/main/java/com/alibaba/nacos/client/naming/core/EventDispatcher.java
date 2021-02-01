@@ -40,7 +40,7 @@ import java.util.concurrent.TimeUnit;
 
 import static com.alibaba.nacos.client.utils.LogUtils.NAMING_LOGGER;
 
-/** 事件调度者  单线程处理
+/** 事件调度者  单线程处理 比如通知服务实例变更
  * Event dispatcher.
  * 比如ServiceInfo有变动(新增、修改、删除)，会通知过来  springcloud的NacosWatch会注册EventDispatcher事件
  * @author xuanyin
@@ -49,7 +49,7 @@ import static com.alibaba.nacos.client.utils.LogUtils.NAMING_LOGGER;
 public class EventDispatcher implements Closeable {
 
     private ExecutorService executor = null;
-
+    /** 变更服务对象 */
     private final BlockingQueue<ServiceInfo> changedServices = new LinkedBlockingQueue<ServiceInfo>();
     /** 事件监听注册者  */
     private final ConcurrentMap<String, List<EventListener>> observerMap = new ConcurrentHashMap<String, List<EventListener>>();
@@ -68,10 +68,10 @@ public class EventDispatcher implements Closeable {
             }
         });
 
-        this.executor.execute(new Notifier()); // 一直循环   知道closed
+        this.executor.execute(new Notifier()); // Notifier一直循环   直到closed=true结束
     }
 
-    /**
+    /** subscribe调用本方法
      * Add listener.
      *
      * @param serviceInfo service info
@@ -89,7 +89,7 @@ public class EventDispatcher implements Closeable {
             observers.add(listener);
         }
 
-        serviceChanged(serviceInfo);
+        serviceChanged(serviceInfo); // changedServices.add(serviceInfo);
     }
 
     /**
@@ -169,7 +169,7 @@ public class EventDispatcher implements Closeable {
                 }
 
                 try {
-                    List<EventListener> listeners = observerMap.get(serviceInfo.getKey());
+                    List<EventListener> listeners = observerMap.get(serviceInfo.getKey()); // 只通知某个服务的监听者
 
                     if (!CollectionUtils.isEmpty(listeners)) {
                         for (EventListener listener : listeners) {
