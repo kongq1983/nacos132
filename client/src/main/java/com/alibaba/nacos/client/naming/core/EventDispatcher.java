@@ -40,9 +40,9 @@ import java.util.concurrent.TimeUnit;
 
 import static com.alibaba.nacos.client.utils.LogUtils.NAMING_LOGGER;
 
-/**
+/** 事件调度者  单线程处理
  * Event dispatcher.
- *
+ * 比如ServiceInfo有变动(新增、修改、删除)，会通知过来  springcloud的NacosWatch会注册EventDispatcher事件
  * @author xuanyin
  */
 @SuppressWarnings("PMD.ThreadPoolCreationRule")
@@ -51,13 +51,13 @@ public class EventDispatcher implements Closeable {
     private ExecutorService executor = null;
 
     private final BlockingQueue<ServiceInfo> changedServices = new LinkedBlockingQueue<ServiceInfo>();
-
+    /** 事件监听注册者  */
     private final ConcurrentMap<String, List<EventListener>> observerMap = new ConcurrentHashMap<String, List<EventListener>>();
 
     private volatile boolean closed = false;
 
     public EventDispatcher() {
-
+        // 单线程
         this.executor = Executors.newSingleThreadExecutor(new ThreadFactory() {
             @Override
             public Thread newThread(Runnable r) {
@@ -151,7 +151,7 @@ public class EventDispatcher implements Closeable {
         closed = true;
         NAMING_LOGGER.info("{} do shutdown stop", className);
     }
-
+    /** 线程池只有1个线程在处理  */
     private class Notifier implements Runnable {
 
         @Override
@@ -173,9 +173,9 @@ public class EventDispatcher implements Closeable {
 
                     if (!CollectionUtils.isEmpty(listeners)) {
                         for (EventListener listener : listeners) {
-                            List<Instance> hosts = Collections.unmodifiableList(serviceInfo.getHosts());
+                            List<Instance> hosts = Collections.unmodifiableList(serviceInfo.getHosts()); // 具体的服务实例
                             listener.onEvent(new NamingEvent(serviceInfo.getName(), serviceInfo.getGroupName(),
-                                    serviceInfo.getClusters(), hosts));
+                                    serviceInfo.getClusters(), hosts)); // 逐个通知 比如SpringCloud Alibaba的NacosWatch类
                         }
                     }
 

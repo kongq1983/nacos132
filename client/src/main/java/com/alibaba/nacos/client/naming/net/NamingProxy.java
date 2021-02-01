@@ -235,7 +235,7 @@ public class NamingProxy implements Closeable {
         params.put("healthy", String.valueOf(instance.isHealthy()));
         params.put("ephemeral", String.valueOf(instance.isEphemeral()));
         params.put("metadata", JacksonUtils.toJson(instance.getMetadata()));
-
+        // com.alibaba.nacos.naming.controllers.InstanceController.register
         reqApi(UtilAndComs.nacosUrlInstance, params, HttpMethod.POST); // 注册实例 POST /nacos/v1/ns/instance
 
     }
@@ -470,7 +470,7 @@ public class NamingProxy implements Closeable {
                     break;
             }
         }
-
+        // {"doms":["user-service","nacos-discovery"],"count":2}
         String result = reqApi(UtilAndComs.nacosUrlBase + "/service/list", params, HttpMethod.GET);
 
         JsonNode json = JacksonUtils.toObj(result);
