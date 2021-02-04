@@ -127,16 +127,16 @@ public class PushService implements ApplicationContextAware, ApplicationListener
                 Loggers.PUSH.info(serviceName + " is changed, add it to push queue.");
                 ConcurrentMap<String, PushClient> clients = clientMap
                         .get(UtilsAndCommons.assembleFullServiceName(namespaceId, serviceName));
-                if (MapUtils.isEmpty(clients)) {
+                if (MapUtils.isEmpty(clients)) { // 没有客户端连接
                     return;
                 }
 
                 Map<String, Object> cache = new HashMap<>(16);
                 long lastRefTime = System.nanoTime();
                 for (PushClient client : clients.values()) {
-                    if (client.zombie()) { // 僵尸客户端 删除
+                    if (client.zombie()) {
                         Loggers.PUSH.debug("client is zombie: " + client.toString());
-                        clients.remove(client.toString());
+                        clients.remove(client.toString()); // 清除僵尸客户端
                         Loggers.PUSH.debug("client is zombie: " + client.toString());
                         continue;
                     }
@@ -146,7 +146,7 @@ public class PushService implements ApplicationContextAware, ApplicationListener
                     String key = getPushCacheKey(serviceName, client.getIp(), client.getAgent());
                     byte[] compressData = null;
                     Map<String, Object> data = null;
-                    if (switchDomain.getDefaultPushCacheMillis() >= 20000 && cache.containsKey(key)) { // 默认10s=10000 也就是默认不走缓存
+                    if (switchDomain.getDefaultPushCacheMillis() >= 20000 && cache.containsKey(key)) { // 默认10s=10000 默认情况下这个条件不会满足的 也就是默认不走缓存
                         org.javatuples.Pair pair = (org.javatuples.Pair) cache.get(key);
                         compressData = (byte[]) (pair.getValue0());
                         data = (Map<String, Object>) pair.getValue1();
@@ -323,8 +323,8 @@ public class PushService implements ApplicationContextAware, ApplicationListener
 
         try {
             byte[] dataBytes = dataStr.getBytes(StandardCharsets.UTF_8);
-            dataBytes = compressIfNecessary(dataBytes);
-
+            dataBytes = compressIfNecessary(dataBytes); // 大于1024字节会压缩
+            // dataBytes是data转成json字符串
             DatagramPacket packet = new DatagramPacket(dataBytes, dataBytes.length, client.socketAddr);
 
             // we must store the key be fore send, otherwise there will be a chance the
@@ -376,7 +376,7 @@ public class PushService implements ApplicationContextAware, ApplicationListener
                 .containsKey(UtilsAndCommons.assembleFullServiceName(service.getNamespaceId(), service.getName()))) {
             return;  // 当前futureMap已有该处理任务 则忽略
         }
-
+        // onApplicationEvent 接收事件
         this.applicationContext.publishEvent(new ServiceChangeEvent(this, service));  // 发布事件
     }
 

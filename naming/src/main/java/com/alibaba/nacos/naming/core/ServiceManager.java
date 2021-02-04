@@ -489,7 +489,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public void registerInstance(String namespaceId, String serviceName, Instance instance) throws NacosException {
         //创建空服务
-        createEmptyService(namespaceId, serviceName, instance.isEphemeral());
+        createEmptyService(namespaceId, serviceName, instance.isEphemeral()); // 这里会放到serviceMap
         // 从map中获取service
         Service service = getService(namespaceId, serviceName);
 
@@ -597,7 +597,7 @@ public class ServiceManager implements RecordListener<Service> {
         }
 
         for (Instance instance : ips) {
-            if (instance.getIp().equals(ip) && instance.getPort() == port) {
+            if (instance.getIp().equals(ip) && instance.getPort() == port) { // ip和port都要匹配
                 return instance;
             }
         }

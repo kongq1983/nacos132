@@ -79,7 +79,7 @@ public class PushReceiver implements Runnable, Closeable {
                 // byte[] is initialized with 0 full filled by default
                 byte[] buffer = new byte[UDP_MSS];
                 DatagramPacket packet = new DatagramPacket(buffer, buffer.length);
-
+                // 接收 This method blocks until a datagram is received
                 udpSocket.receive(packet);
 
                 String json = new String(IoUtils.tryDecompress(packet.getData()), UTF_8).trim(); // 解压缩tryDecompress
@@ -103,7 +103,7 @@ public class PushReceiver implements Runnable, Closeable {
                     ack = "{\"type\": \"unknown-ack\"" + ", \"lastRefTime\":\"" + pushPacket.lastRefTime
                             + "\", \"data\":" + "\"\"}";
                 }
-
+                //  发送
                 udpSocket.send(new DatagramPacket(ack.getBytes(UTF_8), ack.getBytes(UTF_8).length,
                         packet.getSocketAddress()));
             } catch (Exception e) {

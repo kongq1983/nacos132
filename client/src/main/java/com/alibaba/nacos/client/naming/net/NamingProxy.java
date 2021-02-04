@@ -413,9 +413,9 @@ public class NamingProxy implements Closeable {
         if (NAMING_LOGGER.isDebugEnabled()) {
             NAMING_LOGGER.debug("[BEAT] {} sending beat to server: {}", namespaceId, beatInfo.toString());
         }
-        Map<String, String> params = new HashMap<String, String>(8);
-        Map<String, String> bodyMap = new HashMap<String, String>(2);
-        if (!lightBeatEnabled) {
+        Map<String, String> params = new HashMap<String, String>(8); // params
+        Map<String, String> bodyMap = new HashMap<String, String>(2); // body
+        if (!lightBeatEnabled) { // lightBeatEnabled=true 不会走这里
             bodyMap.put("beat", JacksonUtils.toJson(beatInfo));
         }
         params.put(CommonParams.NAMESPACE_ID, namespaceId);

@@ -323,10 +323,10 @@ public class InstanceController {
     public ObjectNode beat(HttpServletRequest request) throws Exception {
 
         ObjectNode result = JacksonUtils.createEmptyJsonNode();
-        result.put(SwitchEntry.CLIENT_BEAT_INTERVAL, switchDomain.getClientBeatInterval());
+        result.put(SwitchEntry.CLIENT_BEAT_INTERVAL, switchDomain.getClientBeatInterval()); // clientBeatInterval=默认5s
 
         String beat = WebUtils.optional(request, "beat", StringUtils.EMPTY);
-        RsInfo clientBeat = null;
+        RsInfo clientBeat = null; // 客户端过来没有beat
         if (StringUtils.isNotBlank(beat)) {
             clientBeat = JacksonUtils.toObj(beat, RsInfo.class);
         }
@@ -383,7 +383,7 @@ public class InstanceController {
             clientBeat.setPort(port);
             clientBeat.setCluster(clusterName);
         }
-        service.processClientBeat(clientBeat);
+        service.processClientBeat(clientBeat); // 设置最后1次beat时间，并通知其他事件订阅者
 
         result.put(CommonParams.CODE, NamingResponseCode.OK);
         if (instance.containsMetadata(PreservedMetadataKeys.HEART_BEAT_INTERVAL)) {

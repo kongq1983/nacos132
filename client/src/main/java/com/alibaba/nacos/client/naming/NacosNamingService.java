@@ -192,7 +192,7 @@ public class NacosNamingService implements NamingService {
 
     @Override
     public void registerInstance(String serviceName, String groupName, Instance instance) throws NacosException {
-        String groupedServiceName = NamingUtils.getGroupedName(serviceName, groupName);
+        String groupedServiceName = NamingUtils.getGroupedName(serviceName, groupName); // groupName + @@ + serviceName
         if (instance.isEphemeral()) { // 临时的
             BeatInfo beatInfo = beatReactor.buildBeatInfo(groupedServiceName, instance); // 构造心跳包
             beatReactor.addBeatInfo(groupedServiceName, beatInfo); // /nacos/v1/ns/instance/beat发送心跳
