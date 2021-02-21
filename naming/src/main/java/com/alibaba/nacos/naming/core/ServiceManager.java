@@ -77,7 +77,7 @@ public class ServiceManager implements RecordListener<Service> {
      * Map(namespace, Map(group::serviceName, Service)).
      */
     private final Map<String, Map<String, Service>> serviceMap = new ConcurrentHashMap<>();
-
+    /** 由外部consumer、provider、console、openapi对实例进行变更时，被该server收到，并offer进去的 */
     private final LinkedBlockingDeque<ServiceKey> toBeUpdatedServicesQueue = new LinkedBlockingDeque<>(1024 * 1024);
 
     private final Synchronizer synchronizer = new ServiceStatusSynchronizer();
@@ -123,9 +123,9 @@ public class ServiceManager implements RecordListener<Service> {
      * Init service maneger.
      */
     @PostConstruct
-    public void init() {
+    public void init() { // bean初始化之后，执行一次调度，调度由ServiceReporter来执行  刚启动时执行一次同步数据到其他服务是否真的有必要?
         GlobalExecutor.scheduleServiceReporter(new ServiceReporter(), 60000, TimeUnit.MILLISECONDS);
-
+        // 此处是通过死循环遍历队列发现service改变的通知
         GlobalExecutor.submitServiceUpdateManager(new UpdatedServiceProcessor());
 
         if (emptyServiceAutoClean) {
@@ -245,7 +245,7 @@ public class ServiceManager implements RecordListener<Service> {
         //get changed service from other server asynchronously
         @Override
         public void run() {
-            ServiceKey serviceKey = null;
+            ServiceKey serviceKey = null; // 该ServiceKey是由namespaceId+serviceName+serverIP+checksum组成的
 
             try {
                 while (true) {
@@ -489,7 +489,7 @@ public class ServiceManager implements RecordListener<Service> {
      */
     public void registerInstance(String namespaceId, String serviceName, Instance instance) throws NacosException {
         //创建空服务
-        createEmptyService(namespaceId, serviceName, instance.isEphemeral());
+        createEmptyService(namespaceId, serviceName, instance.isEphemeral()); // 这里会放到serviceMap
         // 从map中获取service
         Service service = getService(namespaceId, serviceName);
 
@@ -597,7 +597,7 @@ public class ServiceManager implements RecordListener<Service> {
         }
 
         for (Instance instance : ips) {
-            if (instance.getIp().equals(ip) && instance.getPort() == port) {
+            if (instance.getIp().equals(ip) && instance.getPort() == port) { // ip和port都要匹配
                 return instance;
             }
         }
@@ -942,20 +942,20 @@ public class ServiceManager implements RecordListener<Service> {
                         if (!distroMapper.responsible(serviceName)) {
                             continue;
                         }
-
-                        Service service = getService(namespaceId, serviceName);
+                        // 如果size>0 且 distroMapper.responsible(serviceName)为true继续向下执行
+                        Service service = getService(namespaceId, serviceName); // 获取Service实例service
 
                         if (service == null || service.isEmpty()) {
                             continue;
                         }
-
+                        // 如果service不为空，通过对该service下所有Instance实例组成的ip.getIp() + ":" + ip.getPort() + "_" + ip.getWeight() + "_"+ ip.isHealthy() + "_" + ip.getClusterName()执行md5来获得该service对应的checksum
                         service.recalculateChecksum();
 
                         checksum.addItem(serviceName, service.getChecksum());
                     }
 
                     Message msg = new Message();
-
+                    // 再将service的checksum封装为Message实例msg,
                     msg.setData(JacksonUtils.toJson(checksum));
 
                     Collection<Member> sameSiteServers = memberManager.allMembers();
@@ -966,9 +966,9 @@ public class ServiceManager implements RecordListener<Service> {
 
                     for (Member server : sameSiteServers) {
                         if (server.getAddress().equals(NetUtils.localServer())) {
-                            continue;
+                            continue; // 排除自己
                         }
-                        synchronizer.send(server.getAddress(), msg);
+                        synchronizer.send(server.getAddress(), msg); // 再将该消息同步到出自已以外的所有服务器。同步的过程是通过async http post请求path /nacos/v1/ns/service/status来执行的，此处不关心执行结果，异步执行
                     }
                 }
             } catch (Exception e) {

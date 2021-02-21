@@ -189,7 +189,7 @@ public class NamingProxy implements Closeable {
                 return;
             }
 
-            if (System.currentTimeMillis() - lastSrvRefTime < vipSrvRefInterMillis) {
+            if (System.currentTimeMillis() - lastSrvRefTime < vipSrvRefInterMillis) { // vipSrvRefInterMillis默认30s
                 return;
             }
 
@@ -235,7 +235,7 @@ public class NamingProxy implements Closeable {
         params.put("healthy", String.valueOf(instance.isHealthy()));
         params.put("ephemeral", String.valueOf(instance.isEphemeral()));
         params.put("metadata", JacksonUtils.toJson(instance.getMetadata()));
-
+        // com.alibaba.nacos.naming.controllers.InstanceController.register
         reqApi(UtilAndComs.nacosUrlInstance, params, HttpMethod.POST); // 注册实例 POST /nacos/v1/ns/instance
 
     }
@@ -413,9 +413,9 @@ public class NamingProxy implements Closeable {
         if (NAMING_LOGGER.isDebugEnabled()) {
             NAMING_LOGGER.debug("[BEAT] {} sending beat to server: {}", namespaceId, beatInfo.toString());
         }
-        Map<String, String> params = new HashMap<String, String>(8);
-        Map<String, String> bodyMap = new HashMap<String, String>(2);
-        if (!lightBeatEnabled) {
+        Map<String, String> params = new HashMap<String, String>(8); // params
+        Map<String, String> bodyMap = new HashMap<String, String>(2); // body
+        if (!lightBeatEnabled) { // lightBeatEnabled=true 不会走这里
             bodyMap.put("beat", JacksonUtils.toJson(beatInfo));
         }
         params.put(CommonParams.NAMESPACE_ID, namespaceId);
@@ -470,7 +470,7 @@ public class NamingProxy implements Closeable {
                     break;
             }
         }
-
+        // {"doms":["user-service","nacos-discovery"],"count":2}
         String result = reqApi(UtilAndComs.nacosUrlBase + "/service/list", params, HttpMethod.GET);
 
         JsonNode json = JacksonUtils.toObj(result);
