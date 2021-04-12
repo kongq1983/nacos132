@@ -243,7 +243,7 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
             oldIpMap.put(ip.getDatumKey(), ip);
         }
 
-        List<Instance> updatedIPs = updatedIps(ips, oldIpMap.values());
+        List<Instance> updatedIPs = updatedIps(ips, oldIpMap.values()); // 返回修改过的实例
         if (updatedIPs.size() > 0) {
             for (Instance ip : updatedIPs) {
                 Instance oldIP = oldIpMap.get(ip.getDatumKey());
@@ -252,7 +252,7 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
                 // because the checker has the most precise result
                 // Only when ip is not marked, don't we update the health status of IP:
                 if (!ip.isMarked()) {
-                    ip.setHealthy(oldIP.isHealthy());
+                    ip.setHealthy(oldIP.isHealthy()); // 只设置healthy
                 }
 
                 if (ip.isHealthy() != oldIP.isHealthy()) {
@@ -268,19 +268,19 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
                 }
             }
         }
-
-        List<Instance> newIPs = subtract(ips, oldIpMap.values());
+        /** 返回第1个参数中的实例，在后一个列表中，不存在的实例 */
+        List<Instance> newIPs = subtract(ips, oldIpMap.values()); // 返回新增实例列表
         if (newIPs.size() > 0) {
             Loggers.EVT_LOG
                     .info("{} {SYNC} {IP-NEW} cluster: {}, new ips size: {}, content: {}", getService().getName(),
                             getName(), newIPs.size(), newIPs.toString());
 
             for (Instance ip : newIPs) {
-                HealthCheckStatus.reset(ip);
+                HealthCheckStatus.reset(ip);  //不存在则新增， 存在则替换
             }
         }
-
-        List<Instance> deadIPs = subtract(oldIpMap.values(), ips);
+        /** 返回第1个参数中的实例，在后一个列表中，不存在的实例 */
+        List<Instance> deadIPs = subtract(oldIpMap.values(), ips);  // 返回删除实例列表
 
         if (deadIPs.size() > 0) {
             Loggers.EVT_LOG
@@ -288,7 +288,7 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
                             getName(), deadIPs.size(), deadIPs.toString());
 
             for (Instance ip : deadIPs) {
-                HealthCheckStatus.remv(ip);
+                HealthCheckStatus.remv(ip); // 删除
             }
         }
 
@@ -310,9 +310,9 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
             stringIpAddressMap.put(instance.getIp() + ":" + instance.getPort(), instance);
         }
 
-        Map<String, Integer> intersectMap = new ConcurrentHashMap<>(newInstance.size() + oldInstance.size());
-        Map<String, Instance> updatedInstancesMap = new ConcurrentHashMap<>(newInstance.size());
-        Map<String, Instance> newInstancesMap = new ConcurrentHashMap<>(newInstance.size());
+        Map<String, Integer> intersectMap = new ConcurrentHashMap<>(newInstance.size() + oldInstance.size()); // 交集
+        Map<String, Instance> updatedInstancesMap = new ConcurrentHashMap<>(newInstance.size()); // 修改的
+        Map<String, Instance> newInstancesMap = new ConcurrentHashMap<>(newInstance.size()); // 新增实例
 
         for (Instance instance : oldInstance) {
             if (stringIpAddressMap.containsKey(instance.getIp() + ":" + instance.getPort())) {
@@ -340,24 +340,24 @@ public class Cluster extends com.alibaba.nacos.api.naming.pojo.Cluster implement
 
             if (value == 1) {
                 if (newInstancesMap.containsKey(key)) {
-                    updatedInstancesMap.put(key, newInstancesMap.get(key));
+                    updatedInstancesMap.put(key, newInstancesMap.get(key));  // 从新的实例map中获取新的instance信息
                 }
             }
         }
 
-        return new ArrayList<>(updatedInstancesMap.values());
+        return new ArrayList<>(updatedInstancesMap.values()); // 返回修改的实例
     }
-
+    /** 返回oldIp列表中的实例，在ips中不存在的实例  */   /** 返回第1个参数中的实例，在后一个列表中，不存在的实例 */
     private List<Instance> subtract(Collection<Instance> oldIp, Collection<Instance> ips) {
         Map<String, Instance> ipsMap = new HashMap<>(ips.size());
         for (Instance instance : ips) {
-            ipsMap.put(instance.getIp() + ":" + instance.getPort(), instance);
+            ipsMap.put(instance.getIp() + ":" + instance.getPort(), instance); // 新的
         }
 
-        List<Instance> instanceResult = new ArrayList<>();
+        List<Instance> instanceResult = new ArrayList<>(); // 新的返回列表
 
-        for (Instance instance : oldIp) {
-            if (!ipsMap.containsKey(instance.getIp() + ":" + instance.getPort())) {
+        for (Instance instance : oldIp) { // 旧的实例
+            if (!ipsMap.containsKey(instance.getIp() + ":" + instance.getPort())) { // 在ips中不存在，则添加
                 instanceResult.add(instance);
             }
         }

@@ -174,7 +174,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
         return KeyBuilder.matchInstanceListKey(key, namespaceId, getName());
     }
 
-    @Override
+    @Override // listener.onChange(datumKey, dataStore.get(datumKey).value); 触发DistroConsistencyServiceImpl.Notify.run
     public void onChange(String key, Instances value) throws Exception {
 
         Loggers.SRV_LOG.info("[NACOS-RAFT] datum is changed, key: {}, value: {}", key, value);
@@ -194,7 +194,7 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
                 instance.setWeight(0.01D);
             }
         }
-
+        // 集群通知
         updateIPs(value.getInstanceList(), KeyBuilder.matchEphemeralInstanceListKey(key));
 
         recalculateChecksum();
@@ -225,19 +225,19 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
         return (healthyInstanceCount() * 1.0 / allIPs().size()) <= getProtectThreshold();
     }
 
-    /**
+    /** 一般Service.onChange()调用
      * Update instances.
-     *
+     * 构建1个clusterName下的Collection<Instance>
      * @param instances instances
      * @param ephemeral whether is ephemeral instance
      */
     public void updateIPs(Collection<Instance> instances, boolean ephemeral) {
-        Map<String, List<Instance>> ipMap = new HashMap<>(clusterMap.size());
+        Map<String, List<Instance>> ipMap = new HashMap<>(clusterMap.size()); // copy
         for (String clusterName : clusterMap.keySet()) {
-            ipMap.put(clusterName, new ArrayList<>());
+            ipMap.put(clusterName, new ArrayList<>()); // 新的实例  重新初始化ArrayList
         }
 
-        for (Instance instance : instances) {
+        for (Instance instance : instances) { //
             try {
                 if (instance == null) {
                     Loggers.SRV_LOG.error("[NACOS-DOM] received malformed ip: null");
@@ -245,25 +245,25 @@ public class Service extends com.alibaba.nacos.api.naming.pojo.Service implement
                 }
 
                 if (StringUtils.isEmpty(instance.getClusterName())) {
-                    instance.setClusterName(UtilsAndCommons.DEFAULT_CLUSTER_NAME);
+                    instance.setClusterName(UtilsAndCommons.DEFAULT_CLUSTER_NAME); // 默认cluster名称
                 }
 
-                if (!clusterMap.containsKey(instance.getClusterName())) {
+                if (!clusterMap.containsKey(instance.getClusterName())) { // 新加入的集群  也就是集群名称不存在
                     Loggers.SRV_LOG
                             .warn("cluster: {} not found, ip: {}, will create new cluster with default configuration.",
                                     instance.getClusterName(), instance.toJson());
                     Cluster cluster = new Cluster(instance.getClusterName(), this);
-                    cluster.init();
-                    getClusterMap().put(instance.getClusterName(), cluster);
+                    cluster.init(); //会启动HealthCheckTask
+                    getClusterMap().put(instance.getClusterName(), cluster); // 加入新的集群
                 }
 
-                List<Instance> clusterIPs = ipMap.get(instance.getClusterName());
+                List<Instance> clusterIPs = ipMap.get(instance.getClusterName()); // 获取集群实例 这个时候是空的 空的数组 ipMap.put(clusterName, new ArrayList<>());
                 if (clusterIPs == null) {
                     clusterIPs = new LinkedList<>();
                     ipMap.put(instance.getClusterName(), clusterIPs);
                 }
 
-                clusterIPs.add(instance);
+                clusterIPs.add(instance); // 添加到集群的列表中
             } catch (Exception e) {
                 Loggers.SRV_LOG.error("[NACOS-DOM] failed to process ip: " + instance, e);
             }

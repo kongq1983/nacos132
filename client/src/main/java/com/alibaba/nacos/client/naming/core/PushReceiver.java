@@ -130,7 +130,7 @@ public class PushReceiver implements Runnable, Closeable {
 
         public String data;
     }
-
+    /** udp 本地端口 */
     public int getUdpPort() {
         return this.udpSocket.getLocalPort();
     }

@@ -619,9 +619,9 @@ public class ServiceManager implements RecordListener<Service> {
             throws NacosException {
 
         Datum datum = consistencyService
-                .get(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral));
+                .get(KeyBuilder.buildInstanceListKey(service.getNamespaceId(), service.getName(), ephemeral)); // 从dataStore获取
 
-        List<Instance> currentIPs = service.allIPs(ephemeral);
+        List<Instance> currentIPs = service.allIPs(ephemeral);  // 根据ephemeral获取 全部的临时节点  或者全部持久节点
         Map<String, Instance> currentInstances = new HashMap<>(currentIPs.size());
         Set<String> currentInstanceIds = Sets.newHashSet();
 
@@ -632,13 +632,13 @@ public class ServiceManager implements RecordListener<Service> {
 
         Map<String, Instance> instanceMap;
         if (datum != null) {
-            instanceMap = setValid(((Instances) datum.value).getInstanceList(), currentInstances);
+            instanceMap = setValid(((Instances) datum.value).getInstanceList(), currentInstances); // 设置最新的healthy和beat，currentInstances中获取最新信息
         } else {
             instanceMap = new HashMap<>(ips.length);
         }
 
         for (Instance instance : ips) {
-            if (!service.getClusterMap().containsKey(instance.getClusterName())) {
+            if (!service.getClusterMap().containsKey(instance.getClusterName())) {  // 集群不存在，新建1个集群
                 Cluster cluster = new Cluster(instance.getClusterName(), service);
                 cluster.init();
                 service.getClusterMap().put(instance.getClusterName(), cluster);
@@ -673,15 +673,15 @@ public class ServiceManager implements RecordListener<Service> {
     private List<Instance> addIpAddresses(Service service, boolean ephemeral, Instance... ips) throws NacosException {
         return updateIpAddresses(service, UtilsAndCommons.UPDATE_INSTANCE_ACTION_ADD, ephemeral, ips);
     }
-
+    // 设置最新的healthy和beat
     private Map<String, Instance> setValid(List<Instance> oldInstances, Map<String, Instance> map) {
 
         Map<String, Instance> instanceMap = new HashMap<>(oldInstances.size());
         for (Instance instance : oldInstances) {
             Instance instance1 = map.get(instance.toIpAddr());
             if (instance1 != null) {
-                instance.setHealthy(instance1.isHealthy());
-                instance.setLastBeat(instance1.getLastBeat());
+                instance.setHealthy(instance1.isHealthy()); // 获取healthy
+                instance.setLastBeat(instance1.getLastBeat()); //获取最后1次beat
             }
             instanceMap.put(instance.getDatumKey(), instance);
         }

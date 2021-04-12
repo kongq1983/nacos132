@@ -400,7 +400,7 @@ public class DistroConsistencyServiceImpl implements EphemeralConsistencyService
             if (action == ApplyAction.CHANGE) {
                 services.put(datumKey, StringUtils.EMPTY);
             }
-            tasks.offer(Pair.with(datumKey, action));
+            tasks.offer(Pair.with(datumKey, action)); // 添加到tasks
         }
 
         public int getTaskSize() {

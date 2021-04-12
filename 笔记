@@ -4,3 +4,7 @@ PushReceiver
 
 # server处理udp
 PushService
+
+
+# instance
+InstanceController  register beat
