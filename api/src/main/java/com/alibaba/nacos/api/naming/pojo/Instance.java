@@ -210,7 +210,7 @@ public class Instance {
     private static boolean strEquals(final String str1, final String str2) {
         return str1 == null ? str2 == null : str1.equals(str2);
     }
-    /** 默认5s  */
+    /** default 5s  */
     public long getInstanceHeartBeatInterval() {
         return getMetaDataByKeyWithDefault(PreservedMetadataKeys.HEART_BEAT_INTERVAL,
                 Constants.DEFAULT_HEART_BEAT_INTERVAL);
