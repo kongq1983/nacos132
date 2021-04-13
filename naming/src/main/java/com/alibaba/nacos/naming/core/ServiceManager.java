@@ -463,7 +463,7 @@ public class ServiceManager implements RecordListener<Service> {
             service.setGroupName(NamingUtils.getGroupName(serviceName));
             // now validate the service. if failed, exception will be thrown
             service.setLastModifiedMillis(System.currentTimeMillis());
-            service.recalculateChecksum();
+            service.recalculateChecksum(); // 计算返回checksum
             if (cluster != null) {
                 cluster.setService(service);
                 service.getClusterMap().put(cluster.getName(), cluster);
@@ -542,12 +542,12 @@ public class ServiceManager implements RecordListener<Service> {
         Service service = getService(namespaceId, serviceName);
         // 使用同步锁处理
         synchronized (service) {
-            List<Instance> instanceList = addIpAddresses(service, ephemeral, ips);
+            List<Instance> instanceList = addIpAddresses(service, ephemeral, ips); // 返回已经存在和本次注册的
 
             Instances instances = new Instances();
             instances.setInstanceList(instanceList);
             // 调用consistencyService.put 处理同步过来的服务
-            consistencyService.put(key, instances);
+            consistencyService.put(key, instances); // onPut 如果ephemeral=true，会把instances放入dataSource
         }
     }
 
@@ -651,7 +651,7 @@ public class ServiceManager implements RecordListener<Service> {
                 instanceMap.remove(instance.getDatumKey());
             } else {
                 instance.setInstanceId(instance.generateInstanceId(currentInstanceIds));
-                instanceMap.put(instance.getDatumKey(), instance);
+                instanceMap.put(instance.getDatumKey(), instance); // 放到map，最终会返回
             }
 
         }
